@@ -18,6 +18,7 @@ import org.testcontainers.junit.jupiter.TestcontainersExtension;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.Set;
 
 @Testcontainers
@@ -55,24 +56,59 @@ public class OrderServiceTest {
     public void shouldCreateOrderWithOrderLines() {
         Product p1 = productRepository.store(new Product(null, "Drill", 156.56));
         Product p2 = productRepository.store(new Product(null, "Cordless Drill", 78.12));
-
         Set<OrderLine> lines = Set.of(new OrderLine(null, p1, 1)
                 , new OrderLine(null, p2, 5));
-
-        Order order = new Order(null, lines);
+        Order order = orderRepository.store(new Order(null, lines));
 
         Assertions.assertNotNull(order);
-        Assertions.assertNull(order.getId());
+        Assertions.assertNotNull(order.getId());
         Assertions.assertEquals(2, order.getLines().size());
-        Iterator<OrderLine> orderLineIterator = order.getLines().iterator();
-        OrderLine first = orderLineIterator.next();
-        OrderLine secondLine = orderLineIterator.next();
+
+        OrderLine first = order.getLines().stream()
+                .filter(orderLine -> orderLine.getProduct().getId().equals(p1.getId()))
+                .findFirst()
+                .orElse(null);
+        Assertions.assertNotNull( first);
         Assertions.assertEquals(1, first.getQuantity());
-        Assertions.assertEquals(5, secondLine.getQuantity());
+
+        OrderLine second = order.getLines().stream()
+                .filter(orderLine -> orderLine.getProduct().getId().equals(p2.getId()))
+                .findFirst()
+                .orElse(null);
+        Assertions.assertNotNull( second);
+        Assertions.assertEquals(5, second.getQuantity());
+
     }
 
     @Test
     public void shouldIncreaseOrderLineQuantityWhenAddingExistingProductToTheOrder() {
+        Product p1 = productRepository.store(new Product(null, "Drill", 156.56));
+        Product p2 = productRepository.store(new Product(null, "Cordless Drill", 78.12));
+        Set<OrderLine> lines = Set.of(new OrderLine(null, p1, 1)
+                , new OrderLine(null, p2, 5));
+        Order order = orderRepository.store(new Order(null, lines));
+
+        order.addProduct(p1);
+        order.addProduct(p2);
+        orderRepository.save(order);
+
+        Assertions.assertNotNull(order);
+        Assertions.assertNotNull(order.getId());
+        Assertions.assertEquals(2, order.getLines().size());
+
+        OrderLine first = order.getLines().stream()
+                .filter(orderLine -> orderLine.getProduct().getId().equals(p1.getId()))
+                .findFirst()
+                .orElse(null);
+        Assertions.assertNotNull( first);
+        Assertions.assertEquals(6, first.getQuantity());
+
+        OrderLine second = order.getLines().stream()
+                .filter(orderLine -> orderLine.getProduct().getId().equals(p2.getId()))
+                .findFirst()
+                .orElse(null);
+        Assertions.assertNotNull( second);
+        Assertions.assertEquals(6, second.getQuantity());
 
     }
 
