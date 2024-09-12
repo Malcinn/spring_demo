@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 @AllArgsConstructor
@@ -23,9 +25,9 @@ public class Order {
      *
      * @JoinColumn will add additional order_id colum on OrderLine side
      */
-    @OneToMany(orphanRemoval = true)
+    @OneToMany(orphanRemoval = true, cascade = CascadeType.ALL)
     @JoinColumn(name = "order_id")
-    private Set<OrderLine> lines;
+    private List<OrderLine> lines;
 
     public void addProduct(Product product) {
         lines.stream()
@@ -38,6 +40,10 @@ public class Order {
 
     public Double calculatePrice() {
         return lines.stream().map(OrderLine::getProduct).map(Product::getPrice).reduce(Double::sum).orElse(0.0);
+    }
+
+    public void removeOrderLine(Long lineId) {
+        lines.removeIf(orderLine -> orderLine.getId().equals(lineId));
     }
 
 }
