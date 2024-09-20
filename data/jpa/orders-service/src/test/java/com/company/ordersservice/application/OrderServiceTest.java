@@ -1,4 +1,4 @@
-package com.company.ordersservice;
+package com.company.ordersservice.application;
 
 import com.company.ordersservice.domain.Order;
 import com.company.ordersservice.domain.OrderLine;
@@ -12,40 +12,39 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.junit.jupiter.TestcontainersExtension;
 import org.testcontainers.utility.DockerImageName;
 
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 
-@Testcontainers
 @SpringBootTest
-@ExtendWith(TestcontainersExtension.class)
+@Testcontainers
+@ExtendWith(value = TestcontainersExtension.class)
 public class OrderServiceTest {
 
     @Autowired
-    private OrderJpaRepository orderRepository;
+    private OrderService orderService;
 
     @Autowired
     private ProductJpaRepository productRepository;
 
     @Autowired
-    private PlatformTransactionManager transactionManager;
+    private OrderJpaRepository orderRepository;
 
     @Container
     static final MySQLContainer<?> mySQLContainer;
 
     static {
         mySQLContainer = (MySQLContainer) new MySQLContainer(DockerImageName.parse("mysql:8.0-debian"))
-                .withDatabaseName("spring-data-jpa-order-service-db")
+                .withDatabaseName("spring-data-jpa-order-service-integration-db")
                 .withUsername("testUser")
                 .withPassword("testPassword");
-        //.withInitScript("OrderRepositoryInit.sql");
         mySQLContainer.start();
     }
 
@@ -57,13 +56,19 @@ public class OrderServiceTest {
         registry.add("spring.datasource.password", mySQLContainer::getPassword);
     }
 
+
+    @Transactional
     @Test
     public void shouldCreateOrderWithOrderLines() {
         Product p1 = productRepository.store(new Product(null, "Drill", 156.56));
         Product p2 = productRepository.store(new Product(null, "Cordless Drill", 78.12));
-        List<OrderLine> lines = new ArrayList<>(List.of(new OrderLine(null, p1, 1)
-                , new OrderLine(null, p2, 5)));
-        Order order = orderRepository.store(new Order(null, lines));
+
+        Order order = orderService.createOrder();
+        orderService.addProducts(order, List.of(p1, p2));
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
 
         Assertions.assertNotNull(order);
         Assertions.assertNotNull(order.getId());
@@ -85,17 +90,20 @@ public class OrderServiceTest {
 
     }
 
+    @Transactional
     @Test
     public void shouldIncreaseOrderLineQuantityWhenAddingExistingProductToTheOrder() {
         Product p1 = productRepository.store(new Product(null, "Drill", 156.56));
         Product p2 = productRepository.store(new Product(null, "Cordless Drill", 78.12));
-        List<OrderLine> lines = new ArrayList<>(List.of(new OrderLine(null, p1, 1)
-                , new OrderLine(null, p2, 5)));
-        Order order = orderRepository.store(new Order(null, lines));
 
-        order.addProduct(p1);
-        order.addProduct(p2);
-        orderRepository.save(order);
+        Order order = orderService.createOrder();
+        orderService.addProducts(order, List.of(p1, p2));
+        orderService.addProduct(order, p1);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
 
         Assertions.assertNotNull(order);
         Assertions.assertNotNull(order.getId());
@@ -116,14 +124,18 @@ public class OrderServiceTest {
         Assertions.assertEquals(6, second.getQuantity());
     }
 
+    @Transactional
     @Test
     public void productShouldNotBeRemovedAfterOrderIsRemoved() {
         Product p1 = productRepository.store(new Product(null, "Drill", 156.56));
         Product p2 = productRepository.store(new Product(null, "Cordless Drill", 78.12));
 
-        List<OrderLine> lines = new ArrayList<>(List.of(new OrderLine(null, p1, 1)
-                , new OrderLine(null, p2, 5)));
-        Order order = orderRepository.store(new Order(null, lines));
+        Order order = orderService.createOrder();
+        orderService.addProducts(order, List.of(p1, p2));
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
 
         Assertions.assertNotNull(order);
         Assertions.assertNotNull(order.getId());
@@ -145,21 +157,25 @@ public class OrderServiceTest {
 
         //Removing order
         Long orderId = order.getId();
-        Order orderToRemove = orderRepository.findById(orderId).orElse(null);
-        Assertions.assertNotNull(orderToRemove);
-        orderRepository.delete(orderToRemove);
+        orderService.removeOrder(order);
+
         Assertions.assertTrue(orderRepository.findById(orderId).isEmpty());
         Assertions.assertTrue(productRepository.findById(p1.getId()).isPresent());
         Assertions.assertTrue(productRepository.findById(p2.getId()).isPresent());
     }
 
+    @Transactional
     @Test
     public void productShouldNotBeRemovedAfterOrderLineIsRemoved() {
         Product p1 = productRepository.store(new Product(null, "Drill", 156.56));
         Product p2 = productRepository.store(new Product(null, "Cordless Drill", 78.12));
-        List<OrderLine> lines = new ArrayList<>(List.of(new OrderLine(null, p1, 1)
-                , new OrderLine(null, p2, 5)));
-        Order order = orderRepository.store(new Order(null, lines));
+
+        Order order = orderService.createOrder();
+        orderService.addProducts(order, List.of(p1, p2));
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
+        orderService.addProduct(order, p2);
 
         Assertions.assertNotNull(order);
         Assertions.assertNotNull(order.getId());
@@ -179,23 +195,13 @@ public class OrderServiceTest {
         Assertions.assertNotNull(second);
         Assertions.assertEquals(5, second.getQuantity());
 
-        TransactionTemplate template = new TransactionTemplate(transactionManager);
-        template.execute(status -> {
-            //Removing orderLine order
-            order.removeOrderLine(first.getId());
-            orderRepository.save(order);
-            return order.getId();
-        });
+        orderService.removeOrderLine(order, first.getId());
 
-        template.execute(status -> {
-            Order result = orderRepository.findById(order.getId()).orElse(null);
-            List<OrderLine> linesResult = result.getLines();
-            Assertions.assertNotNull(result);
-            Assertions.assertEquals(1, linesResult.size());
-            Assertions.assertTrue(productRepository.findById(p1.getId()).isPresent());
-            Assertions.assertTrue(productRepository.findById(p2.getId()).isPresent());
-            return result.getId();
-        });
-
+        Order result = orderRepository.findById(order.getId()).orElse(null);
+        List<OrderLine> linesResult = result.getLines();
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(1, linesResult.size());
+        Assertions.assertTrue(productRepository.findById(p1.getId()).isPresent());
+        Assertions.assertTrue(productRepository.findById(p2.getId()).isPresent());
     }
 }

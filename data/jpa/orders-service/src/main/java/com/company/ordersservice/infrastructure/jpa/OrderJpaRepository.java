@@ -19,4 +19,9 @@ public interface OrderJpaRepository extends OrderRepository, JpaRepository<Order
     default Optional<Order> find(Long id){
         return findById(id);
     }
+
+    @Override
+    default void remove(Order order) {
+        delete(order);
+    }
 }

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +37,12 @@ public class Order {
                 .ifPresentOrElse(OrderLine::increaseQuantity, () -> {
                     lines.add(new OrderLine(null, product, 1));
                 });
+    }
+
+    public void addProducts(Collection<Product> products) {
+        for (Product product : products){
+            addProduct(product);
+        }
     }
 
     public Double calculatePrice() {

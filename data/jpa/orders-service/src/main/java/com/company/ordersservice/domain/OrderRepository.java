@@ -5,4 +5,5 @@ import java.util.Optional;
 public interface OrderRepository {
     Order store(Order order);
     Optional<Order> find(Long id);
+    void remove(Order order);
 }
